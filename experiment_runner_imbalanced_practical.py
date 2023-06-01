@@ -23,7 +23,7 @@ from lrtc_lib.train_and_infer_service.model_type import ModelTypes
 import argparse
 parser = argparse.ArgumentParser(prog='ActiveTrainer')
 
-parser.add_argument('--dataset', default=None, type=str)
+parser.add_argument('--dataset', default='trec', type=str)
 parser.add_argument('--n_mc', default=5, type=int)
 parser.add_argument('--query_step', default=50, type=int)
 parser.add_argument('--nseed', default=100, type=int)
@@ -166,8 +166,8 @@ if __name__ == '__main__':
     train_params = {ModelTypes.HFBERT: {"metric": "f1"}, ModelTypes.NB: {}}
     active_learning_strategies = [ActiveLearningStrategies.RANDOM, ActiveLearningStrategies.HARD_MINING]
 
-    experiments_runner = ExperimentRunnerImbalancedPractical(first_model_labeled_from_query_num=args.nquery,
-                                                             first_model_negatives_num=args.nquery,
+    experiments_runner = ExperimentRunnerImbalancedPractical(first_model_labeled_from_query_num=args.nseed,
+                                                             first_model_negatives_num=args.nseed,
                                                              active_learning_suggestions_num=args.query_step,
                                                              queries_per_dataset=datasets_categories_and_queries)
 
