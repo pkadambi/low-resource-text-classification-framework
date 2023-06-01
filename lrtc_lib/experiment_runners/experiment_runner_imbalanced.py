@@ -18,6 +18,16 @@ from lrtc_lib.orchestrator import orchestrator_api
 from lrtc_lib.orchestrator.orchestrator_api import LABEL_NEGATIVE
 from lrtc_lib.train_and_infer_service.model_type import ModelTypes
 
+import argparse
+parser = argparse.ArgumentParser(prog='ActiveTrainer')
+
+parser.add_argument('--dataset', default='subjectivity_imbalanced_subjective', type=str)
+parser.add_argument('--label_id', default='subjective', type=str)
+parser.add_argument('--n_mc', default=5, type=int)
+parser.add_argument('--query_step', default=50, type=int)
+parser.add_argument('--nseed', default=100, type=int)
+parser.add_argument('--nquery_steps', default=50, type=int)
+args = parser.parse_args()
 
 class ExperimentRunnerImbalanced(ExperimentRunner):
     """
@@ -87,12 +97,14 @@ if __name__ == '__main__':
     start_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
     # define experiments parameters
-    experiment_name = 'imbalanced_NB'
-    active_learning_iterations_num = 1
-    num_experiment_repeats = 1
+    experiment_name = f'imbalanced_{args.dataset}_calib_nseed_{args.nseed}_step_{args.query_step}_nactive_{args.nquery_steps}_MC_{args.n_mc}'
+    active_learning_iterations_num = args.nquery_steps
+    num_experiment_repeats = args.n_mc
     # for full list of datasets and categories available run: python -m lrtc_lib.data_access.loaded_datasets_info
-    datasets_and_categories = {'subjectivity_imbalanced_subjective': ['subjective']}
-    classification_models = [ModelTypes.NB]
+    datasets_and_categories = {args.dataset: [args.label_id]}
+
+    # datasets_and_categories = {'subjectivity_imbalanced_subjective': ['subjective']}
+    classification_models = [ModelTypes.HFBERT]
     train_params = {ModelTypes.HFBERT: {"metric": "f1"}, ModelTypes.NB: {}}
     # active_learning_strategies = [ActiveLearningStrategies.RANDOM, ActiveLearningStrategies.HARD_MINING]
     active_learning_strategies = [ActiveLearningStrategies.RANDOM,
@@ -102,9 +114,9 @@ if __name__ == '__main__':
                                   ActiveLearningStrategies.DAL,
                                   ActiveLearningStrategies.DROPOUT_PERCEPTRON,
                                   ActiveLearningStrategies.PERCEPTRON_ENSEMBLE]
-    experiments_runner = ExperimentRunnerImbalanced(first_model_positives_num=100,
-                                                    first_model_negatives_num=100,
-                                                    active_learning_suggestions_num=50)
+    experiments_runner = ExperimentRunnerImbalanced(first_model_positives_num=int(args.nseed/2),
+                                                    first_model_negatives_num=int(args.nseed/2),
+                                                    active_learning_suggestions_num=args.query_step)
 
     results_file_path, results_file_path_aggregated = res_handler.get_results_files_paths(
         experiment_name=experiment_name, start_timestamp=start_timestamp, repeats_num=num_experiment_repeats)

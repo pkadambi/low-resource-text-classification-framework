@@ -9,7 +9,10 @@ from pathlib import Path
 import pandas as pd
 import seaborn as sns
 import matplotlib
-matplotlib.use('TkAgg')
+try:
+    matplotlib.use('TkAgg')
+except:
+    pass
 import matplotlib.pyplot as plt
 
 sns.set_theme()

@@ -9,10 +9,12 @@ from sklearn.preprocessing import label_binarize
 from torchmetrics.classification import CalibrationError
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
+try:
+    matplotlib.use('TkAgg')
+except:
+    pass
 import matplotlib.pyplot as plt
 from lrtc_lib.metrics.nn_calib_metrics import confECE, calc_MCE
-plt.figure()
 
 def bin_class_probas_and_preds(y_true, y_prob, nclasses, n_bins, strategy='quantile'):
     '''

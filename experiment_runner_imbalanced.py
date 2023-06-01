@@ -7,16 +7,17 @@ import datetime
 import logging
 from collections import defaultdict
 from typing import List
-import os
-print('CWD', os.getcwd())
-from lrtc_lib.experiment_runners import experiments_results_handler as res_handler
+
+import lrtc_lib.experiment_runners.experiments_results_handler as res_handler
 from lrtc_lib.experiment_runners.experiment_runner import ExperimentRunner, ExperimentParams
+from lrtc_lib.experiment_runners.experiment_runners_core.plot_results import plot_results
 from lrtc_lib.oracle_data_access import oracle_data_access_api
 from lrtc_lib.active_learning.strategies import ActiveLearningStrategies
-from lrtc_lib.data_access.core.data_structs import TextElement
+from lrtc_lib.data_access.core.data_structs import Label, TextElement
 from lrtc_lib.orchestrator import orchestrator_api
-from lrtc_lib.experiment_runners.experiment_runners_core.plot_results import plot_results
+from lrtc_lib.orchestrator.orchestrator_api import LABEL_NEGATIVE
 from lrtc_lib.train_and_infer_service.model_type import ModelTypes
+
 import argparse
 parser = argparse.ArgumentParser(prog='ActiveTrainer')
 
@@ -27,88 +28,95 @@ parser.add_argument('--query_step', default=50, type=int)
 parser.add_argument('--nseed', default=100, type=int)
 parser.add_argument('--nquery_steps', default=50, type=int)
 args = parser.parse_args()
-class ExperimentRunnerBalanced(ExperimentRunner):
+
+class ExperimentRunnerImbalanced(ExperimentRunner):
     """
-    An experiment over balanced data.
+    An experiment over imbalanced data.
 
     The positive instances for the first model are sampled randomly from the true positive instances.
     The negative instances for the first model are sampled randomly from all other instances, and are set as negatives
     (regardless of their gold label).
     """
 
-    def __init__(self, first_model_labeled_num: int, active_learning_suggestions_num: int):
+    def __init__(self, first_model_positives_num: int, first_model_negatives_num: int,
+                 active_learning_suggestions_num: int):
         """
-        Init the ExperimentRunner
-        :param first_model_labeled_num: the number of labeled instances to provide for the first model.
+        Init the ExperimentsRunner
+        :param first_model_positives_num: the number of positive instances to provide for the first model.
+        :param first_model_negatives_num: the number of negative instances to provide for the first model.
         :param active_learning_suggestions_num: the number of instances to be suggested by the active learning strategy
         for each iteration (for training the second model and onwards).
         """
-        super().__init__(first_model_positives_num=first_model_labeled_num, first_model_negatives_num=0,
-                         active_learning_suggestions_num=active_learning_suggestions_num)
+        super().__init__(first_model_positives_num, first_model_negatives_num, active_learning_suggestions_num)
 
     def set_first_model_positives(self, config, random_seed) -> List[TextElement]:
         """
-        Randomly choose instances, regardless of their gold label.
+        Randomly choose true positive instances.
         :param config: experiment config for this run
         :param random_seed: a seed for the Random being used for sampling
         :return: a list of TextElements
         """
-        sample_size = self.first_model_positives_num
-        sampled_elements = self.data_access.sample_text_elements(config.train_dataset_name, sample_size,
-                                                                 remove_duplicates=True)['results']
-        sampled_uris = [element.uri for element in sampled_elements]
-        sampled_uris_with_labels = \
-            oracle_data_access_api.get_gold_labels(config.train_dataset_name, sampled_uris, config.category_name)
-        orchestrator_api.set_labels(config.workspace_id, sampled_uris_with_labels)
+        all_positives = oracle_data_access_api.sample_positives(config.train_dataset_name, config.category_name, 10**6,
+                                                                random_seed)
+        all_without_duplicates = self.data_access.sample_text_elements(config.train_dataset_name, 10**6,
+                                                                       remove_duplicates=True)['results']
+        uris_without_dups = [element.uri for element in all_without_duplicates]
+        pos_without_dups = [(uri, label) for uri, label in all_positives if uri in uris_without_dups]
+        selected_positives = pos_without_dups[:min(self.first_model_positives_num, len(pos_without_dups))]
+        orchestrator_api.set_labels(config.workspace_id, selected_positives)
 
-        logging.info(f'set the label of {len(sampled_uris_with_labels)} random instances with their gold label '
-                     f'(can be positive or negative) for category {config.category_name}')
-        return sampled_uris
+        positive_uris = [uri for uri, label in selected_positives]
+        logging.info(f'set the label of {len(selected_positives)} true positive instances as positives '
+                     f'for category {config.category_name}')
+        return positive_uris
 
     def set_first_model_negatives(self, config, random_seed) -> List[TextElement]:
         """
-        No need for this function in balanced datasets - do nothing.
+         Randomly choose from all unlabeled instances.
         :param config: experiment config for this run
         :param random_seed: a seed for the Random being used for sampling
-        :return: an empty list
+        :return: a list of TextElements
         """
+        sampled_unlabeled_text_elements = \
+            self.data_access.sample_unlabeled_text_elements(workspace_id=config.workspace_id,
+                                                            dataset_name=config.train_dataset_name,
+                                                            category_name=config.category_name,
+                                                            sample_size=self.first_model_negatives_num,
+                                                            remove_duplicates=True)['results']
+        negative_uris_and_label = [(x.uri, {config.category_name: Label(LABEL_NEGATIVE, {})})
+                                   for x in sampled_unlabeled_text_elements]
+        orchestrator_api.set_labels(config.workspace_id, negative_uris_and_label)
 
-        logging.info('No need for setting negatives in balanced datasets - return an empty list')
-        return []
+        negative_uris = [x.uri for x in sampled_unlabeled_text_elements]
+        logging.info(f'set the label of {len(negative_uris_and_label)} random unlabeled instances as negatives '
+                     f'for category {config.category_name}')
+        return negative_uris
 
 
 if __name__ == '__main__':
     start_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
     # define experiments parameters
-    experiment_name = f'balanced_{args.dataset}_calib_nseed_{args.nseed}_step_{args.query_step}_nactive_{args.nquery_step}_MC_{args.n_mc}'
+    experiment_name = f'imbalanced_{args.dataset}_calib_nseed_{args.nseed}_step_{args.query_step}_nactive_{args.nquery_step}_MC_{args.n_mc}'
     active_learning_iterations_num = args.nquery_steps
     num_experiment_repeats = args.n_mc
     # for full list of datasets and categories available run: python -m lrtc_lib.data_access.loaded_datasets_info
-    # datasets_and_categories = {'polarity': ['positive']}
-    # datasets_and_categories = {'subjectivity': ['objective']}
     datasets_and_categories = {args.dataset: [args.label_id]}
-    # datasets_and_categories = {'cola': ['LOC']}
-    classification_models = [ModelTypes.HFBERT]
-    train_params = {ModelTypes.HFBERT: {"metric": "accuracy"}, ModelTypes.NB: {}}
-    # RETROSPECTIVE = ActiveLearningStrategy("RETROSPECTIVE")
-    # CORE_SET = ActiveLearningStrategy("CORE_SET")
-    # GREEDY_CORE_SET = ActiveLearningStrategy("GREEDY_CORE_SET")
-    # DAL = ActiveLearningStrategy("DAL")
-    # DROPOUT_PERCEPTRON = ActiveLearningStrategy("DROPOUT_PERCEPTRON")
-    # PERCEPTRON_ENSEMBLE = ActiveLearningStrategy("PERCEPTRON_ENSEMBLE")
 
+    # datasets_and_categories = {'subjectivity_imbalanced_subjective': ['subjective']}
+    classification_models = [ModelTypes.HFBERT]
+    train_params = {ModelTypes.HFBERT: {"metric": "f1"}, ModelTypes.NB: {}}
+    # active_learning_strategies = [ActiveLearningStrategies.RANDOM, ActiveLearningStrategies.HARD_MINING]
     active_learning_strategies = [ActiveLearningStrategies.RANDOM,
-    # active_learning_strategies = [
                                   ActiveLearningStrategies.HARD_MINING,
-                                  # ActiveLearningStrategies.CORE_SET,
+                                  ActiveLearningStrategies.CORE_SET,
                                   ActiveLearningStrategies.GREEDY_CORE_SET,
                                   ActiveLearningStrategies.DAL,
-    #                               ActiveLearningStrategies.DROPOUT_PERCEPTRON,
-    #                               ActiveLearningStrategies.PERCEPTRON_ENSEMBLE,
-                                ]
-    experiments_runner = ExperimentRunnerBalanced(first_model_labeled_num=args.nseed,
-                                                  active_learning_suggestions_num=args.query_step)
+                                  ActiveLearningStrategies.DROPOUT_PERCEPTRON,
+                                  ActiveLearningStrategies.PERCEPTRON_ENSEMBLE]
+    experiments_runner = ExperimentRunnerImbalanced(first_model_positives_num=int(args.nseed/2),
+                                                    first_model_negatives_num=int(args.nseed/2),
+                                                    active_learning_suggestions_num=args.query_step)
 
     results_file_path, results_file_path_aggregated = res_handler.get_results_files_paths(
         experiment_name=experiment_name, start_timestamp=start_timestamp, repeats_num=num_experiment_repeats)
@@ -145,7 +153,4 @@ if __name__ == '__main__':
                 if num_experiment_repeats > 1:
                     agg_res_dicts = res_handler.avg_res_dicts(results_all_repeats)
                     res_handler.save_results(results_file_path_aggregated, agg_res_dicts)
-
-    plot_results(results_file_path, metrics=['accuracy', 'LogLoss', 'BrierScore', 'confECE', 'cwECE', 'Acc', 'MSE'])
-    import os
-    os.sys('rm -r ../outputs/models')
+    plot_results(results_file_path)

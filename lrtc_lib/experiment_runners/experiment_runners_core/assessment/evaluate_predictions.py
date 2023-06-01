@@ -10,7 +10,10 @@ from sklearn.metrics import classification_report
 from lrtc_lib.orchestrator.orchestrator_api import LABEL_POSITIVE, BINARY_LABELS
 from lrtc_lib.metrics.calibration_metrics import return_all_calibration_metrics
 import matplotlib
-matplotlib.use('TkAgg')
+try:
+    matplotlib.use('TkAgg')
+except:
+    pass
 import matplotlib.pyplot as plt
 
 def evaluate_predictions(gold_labels: Sequence[FrozenSet[str]], labels_and_scores: Dict[str, Sequence],

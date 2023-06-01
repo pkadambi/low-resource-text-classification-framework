@@ -4,7 +4,10 @@ import tqdm
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use('TkAgg')
+try:
+    matplotlib.use('TkAgg')
+except:
+    pass
 import matplotlib.pyplot as plt
 import seaborn as sns
 import math
