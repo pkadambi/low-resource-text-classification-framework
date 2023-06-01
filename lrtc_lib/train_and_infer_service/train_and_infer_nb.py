@@ -111,7 +111,7 @@ class TrainAndInferNB(TrainAndInferAPI):
 
         labels = [int(np.argmax(prediction)) for prediction in predicted]
         scores = [prediction[1] for prediction in predicted]
-        return {"labels": labels, "scores": scores}
+        return {"labels": labels, "scores": scores, "probas":predicted.tolist()}
 
     def model_file_by_id(self, model_id):
         return os.path.join(self.get_model_dir_by_id(model_id), "nb_model")

@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pandas as pd
 import seaborn as sns
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 sns.set_theme()
@@ -18,6 +20,7 @@ def plot_metric(dataset, metric, df, output_path):
     """
     Plot the results in the most basic fashion. No complex color markers labels etc.
     """
+    plt.figure()
     models = sorted(df["model"].unique())
     als = sorted(df["AL"].unique())
     x_col = "train total count"
@@ -32,20 +35,22 @@ def plot_metric(dataset, metric, df, output_path):
             x = model_df[x_col]
             y = model_df[metric]
             ax = sns.lineplot(x=x, y=y, label=f'{al}_{model}')
-    plt.title(dataset)
+    plt.title(f'Dataset: {dataset}')
     plt.savefig(os.path.join(output_path, f"{dataset}_{metric}"))
-    plt.show()
-    plt.close()
+    # plt.close()
 
 
-def plot_results(path):
+def plot_results(path, metrics=None):
+    if metrics is None:
+        metrics = ["accuracy"]
+
     df = pd.read_csv(path)
     datasets = df["dataset"].unique()
-    metrics = ["accuracy"]
     for dataset in datasets:
         sub_df = df[df["dataset"] == dataset]
         for metric in metrics:
             plot_metric(dataset, metric, sub_df, Path(path).parent)
+    plt.show()
 
 
 if __name__ == '__main__':

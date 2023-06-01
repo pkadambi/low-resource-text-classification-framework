@@ -72,15 +72,31 @@ if __name__ == '__main__':
     start_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
     # define experiments parameters
-    experiment_name = 'balanced_NB'
-    active_learning_iterations_num = 5
-    num_experiment_repeats = 2
+    experiment_name = 'balanced_subjectivity_calib'
+    active_learning_iterations_num = 7
+    num_experiment_repeats = 5
     # for full list of datasets and categories available run: python -m lrtc_lib.data_access.loaded_datasets_info
-    datasets_and_categories = {'trec': ['LOC']}
-    classification_models = [ModelTypes.NB]
+    # datasets_and_categories = {'polarity': ['positive']}
+    datasets_and_categories = {'subjectivity': ['objective']}
+    # datasets_and_categories = {'cola': ['LOC']}
+    classification_models = [ModelTypes.HFBERT]
     train_params = {ModelTypes.HFBERT: {"metric": "accuracy"}, ModelTypes.NB: {}}
-    active_learning_strategies = [ActiveLearningStrategies.RANDOM, ActiveLearningStrategies.HARD_MINING]
+    # RETROSPECTIVE = ActiveLearningStrategy("RETROSPECTIVE")
+    # CORE_SET = ActiveLearningStrategy("CORE_SET")
+    # GREEDY_CORE_SET = ActiveLearningStrategy("GREEDY_CORE_SET")
+    # DAL = ActiveLearningStrategy("DAL")
+    # DROPOUT_PERCEPTRON = ActiveLearningStrategy("DROPOUT_PERCEPTRON")
+    # PERCEPTRON_ENSEMBLE = ActiveLearningStrategy("PERCEPTRON_ENSEMBLE")
 
+    active_learning_strategies = [ActiveLearningStrategies.RANDOM,
+    # active_learning_strategies = [
+                                  ActiveLearningStrategies.HARD_MINING,
+                                  # ActiveLearningStrategies.CORE_SET,
+                                  ActiveLearningStrategies.GREEDY_CORE_SET,
+                                  ActiveLearningStrategies.DAL,
+    #                               ActiveLearningStrategies.DROPOUT_PERCEPTRON,
+    #                               ActiveLearningStrategies.PERCEPTRON_ENSEMBLE,
+                                ]
     experiments_runner = ExperimentRunnerBalanced(first_model_labeled_num=100,
                                                   active_learning_suggestions_num=50)
 
@@ -120,4 +136,4 @@ if __name__ == '__main__':
                     agg_res_dicts = res_handler.avg_res_dicts(results_all_repeats)
                     res_handler.save_results(results_file_path_aggregated, agg_res_dicts)
 
-    plot_results(results_file_path)
+    plot_results(results_file_path, metrics=['accuracy', 'LogLoss', 'BrierScore', 'confECE', 'cwECE', 'Acc', 'MSE'])

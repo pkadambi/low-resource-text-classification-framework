@@ -18,7 +18,7 @@ from tensorflow.python.distribute import parameter_server_strategy
 from tensorflow.python.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.python.keras.engine import data_adapter
 from transformers import BertTokenizer, TFBertForSequenceClassification, InputFeatures
-from tensorflow.python.keras.mixed_precision.experimental import (loss_scale_optimizer as lso)
+from tensorflow.python.keras.mixed_precision import (loss_scale_optimizer as lso)
 from tensorflow.keras import backend as K
 
 from lrtc_lib.definitions import ROOT_DIR
@@ -183,7 +183,7 @@ class TrainAndInferHF(TrainAndInferAPI):
         scores = [float(prediction[label]) for label, prediction in zip(labels, predictions)]
         logging.info("Infer hf model done")
         return {"labels": labels, "scores": scores, "logits": logits.numpy().tolist(),
-                "embeddings": out_emb.numpy().tolist()}
+                "embeddings": out_emb.numpy().tolist(), "probas": predictions.tolist()}
 
     def get_model_status(self, model_id) -> ModelStatus:
         """

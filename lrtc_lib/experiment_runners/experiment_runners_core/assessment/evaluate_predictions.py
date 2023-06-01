@@ -8,10 +8,13 @@ from typing import Dict, FrozenSet, Sequence
 from sklearn.metrics import classification_report
 
 from lrtc_lib.orchestrator.orchestrator_api import LABEL_POSITIVE, BINARY_LABELS
-
+from lrtc_lib.metrics.calibration_metrics import return_all_calibration_metrics
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 def evaluate_predictions(gold_labels: Sequence[FrozenSet[str]], labels_and_scores: Dict[str, Sequence],
-                         binary_positive_label=None):
+                         binary_positive_label=None, n_bins=10):
     """
     :param gold_labels:
     :param labels_and_scores:
@@ -23,8 +26,11 @@ def evaluate_predictions(gold_labels: Sequence[FrozenSet[str]], labels_and_score
         results_dict['average_score'] = sum(score) / len(score)
 
     predicted_label = labels_and_scores['labels']
+    predicted_scores = labels_and_scores['scores']
+    predicted_probas = labels_and_scores['probas']
     prediction_correct = [y in x for x, y in zip(gold_labels, predicted_label)]
     results_dict['accuracy'] = 0 if len(prediction_correct) == 0 else sum(prediction_correct) / len(prediction_correct)
+
 
     def extract_label(labels):
         if len(labels) == 1:
@@ -37,6 +43,7 @@ def evaluate_predictions(gold_labels: Sequence[FrozenSet[str]], labels_and_score
 
     is_binary_label = binary_positive_label is not None or set(gold_labels).issubset(BINARY_LABELS)
     if is_binary_label:
+
         binary_positive_label = binary_positive_label or LABEL_POSITIVE
         results_dict['precision'] = cr[binary_positive_label]['precision']
         results_dict['recall'] = cr[binary_positive_label]['recall']
@@ -47,6 +54,10 @@ def evaluate_predictions(gold_labels: Sequence[FrozenSet[str]], labels_and_score
         results_dict['fp'] = sum([(1 - x) * (1 - y) for x, y in zip(prediction_correct, numeric_gold_labels)])
         results_dict['tn'] = sum([x * (1 - y) for x, y in zip(prediction_correct, numeric_gold_labels)])
         results_dict['fn'] = sum([(1 - x) * y for x, y in zip(prediction_correct, numeric_gold_labels)])
+
+        calibration_metrics = return_all_calibration_metrics(y_true=gold_labels, y_pred=predicted_probas,
+                                                       n_bins=n_bins, nclasses=2)
+        results_dict = {**calibration_metrics, **results_dict}
     else:
         results_dict['precision'] = cr['weighted avg']['precision']
         results_dict['recall'] = cr['weighted avg']['recall']

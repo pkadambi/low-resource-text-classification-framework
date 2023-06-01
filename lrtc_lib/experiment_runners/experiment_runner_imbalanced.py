@@ -94,8 +94,14 @@ if __name__ == '__main__':
     datasets_and_categories = {'subjectivity_imbalanced_subjective': ['subjective']}
     classification_models = [ModelTypes.NB]
     train_params = {ModelTypes.HFBERT: {"metric": "f1"}, ModelTypes.NB: {}}
-    active_learning_strategies = [ActiveLearningStrategies.RANDOM, ActiveLearningStrategies.HARD_MINING]
-
+    # active_learning_strategies = [ActiveLearningStrategies.RANDOM, ActiveLearningStrategies.HARD_MINING]
+    active_learning_strategies = [ActiveLearningStrategies.RANDOM,
+                                  ActiveLearningStrategies.HARD_MINING,
+                                  ActiveLearningStrategies.CORE_SET,
+                                  ActiveLearningStrategies.GREEDY_CORE_SET,
+                                  ActiveLearningStrategies.DAL,
+                                  ActiveLearningStrategies.DROPOUT_PERCEPTRON,
+                                  ActiveLearningStrategies.PERCEPTRON_ENSEMBLE]
     experiments_runner = ExperimentRunnerImbalanced(first_model_positives_num=100,
                                                     first_model_negatives_num=100,
                                                     active_learning_suggestions_num=50)
