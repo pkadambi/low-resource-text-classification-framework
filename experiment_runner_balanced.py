@@ -81,7 +81,7 @@ if __name__ == '__main__':
     start_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
 
     # define experiments parameters
-    experiment_name = f'balanced_{args.dataset}_calib_nseed_{args.nseed}_step_{args.query_step}_nactive_{args.nquery_step}_MC_{args.n_mc}'
+    experiment_name = f'balanced_{args.dataset}_calib_nseed_{args.nseed}_step_{args.query_step}_nactive_{args.nquery_steps}_MC_{args.n_mc}'
     active_learning_iterations_num = args.nquery_steps
     num_experiment_repeats = args.n_mc
     # for full list of datasets and categories available run: python -m lrtc_lib.data_access.loaded_datasets_info
