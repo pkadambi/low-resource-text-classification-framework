@@ -21,8 +21,9 @@ from lrtc_lib.train_and_infer_service.model_type import ModelTypes
 import argparse
 parser = argparse.ArgumentParser(prog='ActiveTrainer')
 
-parser.add_argument('--dataset', default='subjectivity_imbalanced_subjective', type=str)
-parser.add_argument('--label_id', default='subjective', type=str)
+# parser.add_argument('--dataset', default='subjectivity_imbalanced_subjective', type=str)
+parser.add_argument('--dataset', default='ag_news_imbalanced', type=str)
+parser.add_argument('--label_id', default='1', type=str)
 parser.add_argument('--n_mc', default=5, type=int)
 parser.add_argument('--query_step', default=50, type=int)
 parser.add_argument('--nseed', default=100, type=int)
@@ -153,4 +154,7 @@ if __name__ == '__main__':
                 if num_experiment_repeats > 1:
                     agg_res_dicts = res_handler.avg_res_dicts(results_all_repeats)
                     res_handler.save_results(results_file_path_aggregated, agg_res_dicts)
+    import os
+    os.system('rm -r ../outputs/models')
+
     plot_results(results_file_path)
