@@ -2,13 +2,15 @@
 
 # LICENSE: Apache License 2.0 (Apache-2.0)
 # http://www.apache.org/licenses/LICENSE-2.0
-
+import tensorflow as tf
+# print(tf.config.list_physical_devices('GPU'))
 import datetime
 import logging
 from collections import defaultdict
 from typing import List
 import os
 print('CWD', os.getcwd())
+print('HERE')
 from lrtc_lib.experiment_runners import experiments_results_handler as res_handler
 from lrtc_lib.experiment_runners.experiment_runner import ExperimentRunner, ExperimentParams
 from lrtc_lib.oracle_data_access import oracle_data_access_api
@@ -20,8 +22,8 @@ from lrtc_lib.train_and_infer_service.model_type import ModelTypes
 import argparse
 parser = argparse.ArgumentParser(prog='ActiveTrainer')
 
-parser.add_argument('--dataset', default=None, type=str)
-parser.add_argument('--label_id', default=None, type=str)
+parser.add_argument('--dataset', default='subjectivity', type=str)
+parser.add_argument('--label_id', default='objective', type=str)
 parser.add_argument('--n_mc', default=5, type=int)
 parser.add_argument('--query_step', default=50, type=int)
 parser.add_argument('--nseed', default=100, type=int)

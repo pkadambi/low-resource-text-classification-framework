@@ -1,21 +1,5 @@
-#!/bin/bash
-#SBATCH -N 1
-#SBATCH -n 1
-#SBATCH -c 10
-#SBATCH -p gpu
-#SBATCH -q wildfire
-#SBATCH -t 0-10:00
-#SBATCH -o output_balanced.1.out
-#SBATCH -e output_balanced.1.err
-#SBATCH --mail-type=ALL
-#SBATCH --export=None
-#SBATCH --gres=gpu:1
-#SBATCH --mem=64G
-#SBATCH --mail-user=pkadambi@asu.edu
-#SBATCH  -C V100
-nvidia-smi
-echo "SCRIPT STARTED ***********************"
-while getopts d:l:m:s:e:y: option
+
+while getopts d:l:m:s:e:q: option
 do 
 	case "${option}"
 		in
@@ -24,7 +8,7 @@ do
 		m)n_mc=${OPTARG};;
 		s)query_step=${OPTARG};;
 		e)nseed=${OPTARG};;
-		y)nquery_steps=${OPTARG};;
+		q)nquery_steps=${OPTARG};;
 	esac
 done
 			
